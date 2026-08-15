@@ -22,13 +22,15 @@ placeholders and paste it as the agent's instruction.
 > **How to work.**
 >
 > 1. `cd /home/mlovera/dev/ipa && git fetch origin`
-> 2. `git diff origin/main...origin/<BRANCH>` for the full diff; `gh pr view <PR>`
+> 2. `git branch --show-current` — the checkout may have been left on a task
+>    branch; the steps below use remote refs, but know where you are.
+> 3. `git diff origin/main...origin/<BRANCH>` for the full diff; `gh pr view <PR>`
 >    for the description.
-> 3. Read ``<SPEC>`` **before** the diff, so you review against the actual
+> 4. Read ``<SPEC>`` **before** the diff, so you review against the actual
 >    requirement rather than generic taste.
-> 4. To run anything, use a scratch worktree:
->    `git worktree add /tmp/review-<PR> origin/<BRANCH>`. Never modify or push to
->    the PR branch. Remove the worktree when done.
+> 5. To run anything, use a scratch worktree:
+>    `git worktree add ~/dev/worktrees/ipa/review-<PR> origin/<BRANCH>`. Never
+>    modify or push to the PR branch. Remove the worktree when done.
 >
 > **Weight these heavily.**
 >
