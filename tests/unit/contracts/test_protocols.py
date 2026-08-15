@@ -146,6 +146,9 @@ class FakeVectorStore:
     async def delete_document(self, document_id: UUID) -> None:
         return None
 
+    async def refresh_metadata(self, document_id: UUID) -> None:
+        return None
+
     async def search(
         self,
         embedding: list[float],

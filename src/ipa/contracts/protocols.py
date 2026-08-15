@@ -352,6 +352,21 @@ class VectorStore(Protocol):
         """
         ...
 
+    async def refresh_metadata(self, document_id: UUID) -> None:
+        """Re-sync denormalised document metadata onto the document's chunks.
+
+        Chunk rows carry a copy of `tag_id`, `tag_slug`, and `document_status` so
+        that search can filter without a join. Any caller that mutates one of those
+        on the document must invoke this, or search filters go stale.
+
+        Args:
+            document_id: Document whose chunk metadata should be refreshed.
+
+        Returns:
+            None.
+        """
+        ...
+
     async def search(
         self,
         embedding: list[float],
