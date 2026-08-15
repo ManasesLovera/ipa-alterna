@@ -1,7 +1,9 @@
 name: ipa
 
 x-python-env: &python-env
-  env_file: [.env]
+  env_file:
+    - path: .env
+      required: false
   environment:
     IPA_POSTGRES_DSN: postgresql+asyncpg://ipa:ipa@postgres:5432/ipa
     IPA_MONGO_URI: mongodb://mongo:27017

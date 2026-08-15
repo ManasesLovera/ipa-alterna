@@ -183,10 +183,13 @@ def install_exception_handlers(app: FastAPI) -> None:
     Returns:
         None.
     """
-    from fastapi import HTTPException
     from fastapi.encoders import jsonable_encoder
     from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse
+
+    # Starlette's HTTPException is the base of FastAPI's and is what the router
+    # itself raises (404, 405), so registering on it covers both.
+    from starlette.exceptions import HTTPException
 
     def _respond(problem: dict[str, Any]) -> JSONResponse:
         return JSONResponse(
