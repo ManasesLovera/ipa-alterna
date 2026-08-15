@@ -140,9 +140,7 @@ class ChunkHit(IpaModel):
     """One scored chunk returned by the vector store."""
 
     document_id: UUID
-    chunk_index: int = Field(
-        ge=-1, description="-1 identifies the extraction-summary chunk."
-    )
+    chunk_index: int = Field(ge=-1, description="-1 identifies the extraction-summary chunk.")
     text: str
     score: float = Field(description="Higher is more similar; comparable within one result set.")
     page_from: int | None = Field(default=None, ge=1)
