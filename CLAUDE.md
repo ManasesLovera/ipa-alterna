@@ -1,5 +1,10 @@
 # IPA — Project Instructions
 
+> This file is the agent guide for **every** AI tool used on this repository.
+> `AGENTS.md` (read by opencode and other AGENTS.md-aware tools) is a symlink to
+> this file, so there is exactly one copy and it cannot drift. Edit `CLAUDE.md`;
+> never replace the symlink with a second copy.
+
 Intelligent Process Automation platform for documents. Read
 [`docs/00-architecture.md`](docs/00-architecture.md) and
 [`docs/01-conventions.md`](docs/01-conventions.md) before writing any code.
@@ -11,21 +16,17 @@ Do not track work in ad-hoc TODO lists, scratch files, or issue trackers, and do
 not rely on memory of what is left to do. The board is the single source of truth
 for status; `docs/tasks/` is the single source of truth for scope.
 
-The board lives in `.scrumforge.db` at the repo root and is found automatically
-from anywhere inside the repository.
-
-### Commands
+**Read [`docs/03-scrumforge.md`](docs/03-scrumforge.md) before using it.** It
+carries the full command reference, the lifecycle, and the operational gotchas —
+several of which are surprising and none of which are in `scrumforge help`.
 
 ```bash
-scrumforge tasks                 # list every task with status and assignee
-scrumforge show <id>             # full detail of one task
+scrumforge tasks                               # list every task, status, assignee
+scrumforge show <id>                           # detail — WARNING: mutates state
 scrumforge backlog "<title> | <description>"   # add a task
-scrumforge request "<text>"      # ask the scrum master to plan and assign
-scrumforge run <id>              # send the task to its assignee
-scrumforge rework <id>           # developer addresses review feedback
+scrumforge run <id>                            # send to assignee (long-running)
+scrumforge rework <id>                         # developer addresses review feedback
 ```
-
-### Lifecycle
 
 ```text
 backlog -> assigned -> in-progress -> in-review -> done
@@ -36,7 +37,19 @@ backlog -> assigned -> in-progress -> in-review -> done
 `scrumforge run <id>` is called **twice** per cycle: once for the developer to
 implement and open a PR, and again for the reviewer to approve and merge or
 request changes. On `changes-requested`, call `scrumforge rework <id>`, then
-`scrumforge run <id>` again to re-review.
+`scrumforge run <id>` again.
+
+### The four traps
+
+1. **`show` is not read-only** — it moves the task to `in-progress` and creates a
+   worktree. Use `scrumforge tasks` to look without touching.
+2. **Branches come out as `scrumforge/task-N`**, which the pre-push hook rejects.
+   Rename to `feat/t<NN>-<slug>` *before* opening the PR — renaming afterwards
+   closes it.
+3. **It can leave the main checkout on a task branch.** Always run
+   `git branch --show-current` before concluding anything about `main`.
+4. **A run can exit without opening a PR.** Verify with `gh pr list` and
+   `git ls-remote --heads origin`; open the PR by hand rather than re-running.
 
 ### Rules
 
@@ -68,6 +81,12 @@ request changes. On `changes-requested`, call `scrumforge rework <id>`, then
 - **CI must be green before merge.** The pipeline in `.github/workflows/ci.yml`
   runs actionlint, markdownlint, mermaid validation, ruff, mypy, unit tests,
   alembic up/down, integration tests, frontend build, docker build, and gitleaks.
+- **Markdown must pass markdownlint.** CI runs markdownlint on all `*.md`
+  files. Follow the rules it enforces — notably MD022/MD032 (blank lines
+  around headings and lists, including lists inside blockquotes), MD040
+  (language on every fenced code block), MD024 (no duplicate headings), and
+  MD060 (spaced pipes in table separators). When in doubt, run
+  `npx markdownlint-cli2 <file>` before committing.
 - **Docstrings are required** on every module and public function — this is a
   stated project requirement, not a style preference.
 - **`os.environ` is read only in `src/ipa/core/config.py`.** Everywhere else uses

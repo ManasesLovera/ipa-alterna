@@ -103,6 +103,7 @@ Health: `curl localhost:8000/healthz` (liveness) and `localhost:8000/readyz`
 | [`docs/00-architecture.md`](docs/00-architecture.md) | Components, stores, pipeline, provider strategy |
 | [`docs/01-conventions.md`](docs/01-conventions.md) | Repo layout, file ownership, shared contracts, coding rules |
 | [`docs/02-task-plan.md`](docs/02-task-plan.md) | 19 tasks in 7 waves with the dependency graph |
+| [`docs/03-scrumforge.md`](docs/03-scrumforge.md) | Task board usage, lifecycle, and operational gotchas |
 | [`docs/tasks/`](docs/tasks/) | One detailed brief per task |
 
 ## Development
