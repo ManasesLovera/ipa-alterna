@@ -79,6 +79,14 @@ class S3Settings(BaseSettings):
     model_config = _BASE_CONFIG
 
     endpoint: str = Field(default="http://minio:9000", validation_alias="IPA_S3_ENDPOINT")
+    public_endpoint: str = Field(
+        default="",
+        validation_alias="IPA_S3_PUBLIC_ENDPOINT",
+        description=(
+            "Browser-reachable endpoint used to presign download URLs; empty uses "
+            "IPA_S3_ENDPOINT. Set when the endpoint is a docker-internal hostname."
+        ),
+    )
     access_key: str = Field(default="minioadmin", validation_alias="IPA_S3_ACCESS_KEY")
     secret_key: str = Field(default="minioadmin", validation_alias="IPA_S3_SECRET_KEY")
     bucket: str = Field(default="ipa-documents", validation_alias="IPA_S3_BUCKET")
