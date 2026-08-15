@@ -56,7 +56,7 @@ dev = [
     "mypy>=1.13",
     "types-pytz>=2024.2",
     "celery-types>=0.22",
-    "fakeredis>=2.26",
+    "fakeredis[lua]>=2.26",
     "mongomock-motor>=0.0.34",
     "pip-audit>=2.7",
 ]
@@ -133,7 +133,10 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
-markers = ["integration: requires live infrastructure"]
+markers = [
+    "integration: requires live infrastructure",
+    "integration_light: requires only the MinIO service (compose or CI)",
+]
 
 [tool.coverage.run]
 source = ["src/ipa"]
