@@ -20,7 +20,7 @@ services:
       POSTGRES_USER: ipa
       POSTGRES_PASSWORD: ipa
       POSTGRES_DB: ipa
-    ports: ["5432:5432"]
+    ports: ["${IPA_PG_HOST_PORT:-5432}:5432"]
     volumes: [postgres-data:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ipa -d ipa"]
@@ -33,7 +33,7 @@ services:
     image: mongo:7
     environment:
       MONGO_INITDB_DATABASE: ipa
-    ports: ["27017:27017"]
+    ports: ["${IPA_MONGO_HOST_PORT:-27017}:27017"]
     volumes: [mongo-data:/data/db]
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1})"]
@@ -45,7 +45,7 @@ services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
-    ports: ["6379:6379"]
+    ports: ["${IPA_REDIS_HOST_PORT:-6379}:6379"]
     volumes: [redis-data:/data]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -61,8 +61,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${IPA_S3_HOST_PORT:-9000}:9000"
+      - "${IPA_S3_CONSOLE_HOST_PORT:-9001}:9001"
     volumes: [minio-data:/data]
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
@@ -108,7 +108,7 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     ports:
-      - "16686:16686"
+      - "${IPA_JAEGER_HOST_PORT:-16686}:16686"
     networks: [ipa]
 
   api:
@@ -117,7 +117,7 @@ services:
       target: runtime
     <<: *python-env
     command: ["uvicorn", "ipa.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ports: ["8000:8000"]
+    ports: ["${IPA_API_HOST_PORT:-8000}:8000"]
     depends_on:
       postgres: {condition: service_healthy}
       mongo: {condition: service_healthy}

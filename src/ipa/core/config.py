@@ -211,6 +211,7 @@ class Settings(BaseSettings):
 
     env: EnvName = "local"
     log_level: str = Field(default="INFO")
+    log_json: bool = Field(default=True, description="False renders human-readable logs.")
     api_port: int = Field(default=8000, ge=1, le=65535)
     secret_key: str = Field(default="change-me")
     max_upload_mb: int = Field(default=200, ge=1)

@@ -145,13 +145,12 @@ def create_app() -> FastAPI:
         ConfigurationError: If the environment is misconfigured.
     """
     settings = get_settings()
-    configure_logging(settings.log_level, json_output=settings.env != "local")
+    configure_logging(settings.log_level, json_output=settings.log_json)
     settings.validate_startup()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        """Start telemetry on boot and flush it on shutdown."""
-        setup_telemetry(settings.otel.service_name, app=app)
+        """Log the application lifecycle and flush telemetry on shutdown."""
         logger.info("api.started", env=settings.env, routers=len(ROUTERS))
         yield
         shutdown_telemetry()
@@ -172,6 +171,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     install_exception_handlers(app)
+
+    # Instrument before the ASGI stack is frozen at startup: middleware added
+    # from the lifespan handler would never be applied.
+    setup_telemetry(settings.otel.service_name, app=app)
 
     @app.get("/healthz", tags=["ops"], summary="Liveness probe")
     async def healthz() -> dict[str, str]:
