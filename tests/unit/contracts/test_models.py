@@ -153,3 +153,35 @@ def test_every_documented_dto_is_exported() -> None:
     }
 
     assert expected <= set(dir(models))
+
+
+def test_summary_chunk_index_is_representable() -> None:
+    """T12 synthesises a per-document summary chunk at index -1.
+
+    A `ge=0` bound here made that chunk unconstructible while the database column
+    happily stored it, so the DTO could not represent a row the schema allows.
+    """
+    from uuid import uuid4
+
+    from ipa.contracts.models import ChunkHit, ChunkVector
+
+    vector = ChunkVector(
+        document_id=uuid4(),
+        chunk_index=-1,
+        text="invoice_number: ACME-1 | total: 4200.00",
+        embedding=[0.1, 0.2, 0.3],
+        embed_model="fake/embed",
+        page_from=None,
+        page_to=None,
+    )
+    hit = ChunkHit(
+        document_id=vector.document_id,
+        chunk_index=-1,
+        text=vector.text,
+        score=0.9,
+        page_from=None,
+        page_to=None,
+    )
+
+    assert vector.chunk_index == -1
+    assert hit.chunk_index == -1

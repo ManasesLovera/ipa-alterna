@@ -34,6 +34,21 @@ class FakeBlobStore:
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
 
+    async def put_stream(
+        self,
+        key: str,
+        reader: AsyncIterator[bytes],
+        content_type: str,
+        size: int | None = None,
+    ) -> str:
+        return key
+
+    def get_stream(self, key: str, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
+        async def _chunks() -> AsyncIterator[bytes]:
+            yield b""
+
+        return _chunks()
+
     async def put(self, key: str, data: bytes, content_type: str) -> str:
         self.objects[key] = data
         return key
@@ -70,6 +85,16 @@ class FakeContentStore:
 
     async def list_extractions(self, document_id: UUID) -> list[ExtractionRecord]:
         return []
+
+    async def put_raw_response(
+        self,
+        document_id: UUID,
+        step: str,
+        model: str,
+        response_text: str,
+        request_summary: str | None = None,
+    ) -> None:
+        return None
 
     async def delete_document(self, document_id: UUID) -> None:
         return None

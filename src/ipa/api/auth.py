@@ -15,6 +15,7 @@ from fastapi import Header
 from pydantic import BaseModel
 
 from ipa.core.config import get_settings
+from ipa.core.errors import IpaError
 
 logger = structlog.get_logger(__name__)
 
@@ -58,5 +59,15 @@ async def require_auth(x_api_key: Annotated[str | None, Header()] = None) -> Pri
     if x_api_key:
         return Principal(subject=f"api-key:{x_api_key[:6]}", is_authenticated=True)
     if get_settings().is_production:
-        logger.warning("auth.stub_allowed_unauthenticated_request", todo="T16")
+        # Refuse rather than warn. A log line does not stop anonymous access, and a
+        # permissive stub that only complains is precisely how one ships unnoticed.
+        logger.error("auth.stub_refused_unauthenticated_request", todo="T16")
+        raise IpaError(
+            detail=(
+                "Authentication is not configured. The T01 stub refuses to serve "
+                "production traffic; T16 must replace ipa.api.auth.require_auth."
+            ),
+            code="auth_stub_in_production",
+            http_status=500,
+        )
     return Principal()

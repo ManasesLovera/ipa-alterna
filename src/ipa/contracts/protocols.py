@@ -10,6 +10,7 @@ All methods are `async`: every implementation performs network I/O.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Literal, Protocol, runtime_checkable
 from uuid import UUID
@@ -31,7 +32,12 @@ class BlobStore(Protocol):
     """Object storage for original uploads, page images and thumbnails."""
 
     async def put(self, key: str, data: bytes, content_type: str) -> str:
-        """Store bytes under `key`, overwriting any existing object.
+        """Store bytes under `key`, skipping the write if the key already exists.
+
+        Keys for originals are content-addressed (the SHA-256 of the bytes), so an
+        existing key already holds identical content and rewriting it only costs
+        bandwidth. Implementations must therefore treat an existing key as success
+        and return without uploading — document dedupe depends on this.
 
         Args:
             key: Blob key, built with `ipa.core.ids`.
@@ -43,6 +49,45 @@ class BlobStore(Protocol):
 
         Raises:
             IpaError: If the object store rejects the write.
+        """
+        ...
+
+    async def put_stream(
+        self, key: str, reader: AsyncIterator[bytes], content_type: str, size: int | None = None
+    ) -> str:
+        """Store a streamed object without materialising it in memory.
+
+        Uploads can reach hundreds of megabytes; `put` would hold the whole object
+        in RSS on top of the caller's own copy. Same skip-if-exists semantics as
+        `put`.
+
+        Args:
+            key: Blob key.
+            reader: Async iterator yielding chunks of object bytes.
+            content_type: MIME type recorded on the object.
+            size: Total size in bytes when known, which lets backends pick a
+                single-part upload instead of multipart.
+
+        Returns:
+            The key the object was stored under.
+
+        Raises:
+            IpaError: If the object store rejects the write.
+        """
+        ...
+
+    def get_stream(self, key: str, chunk_size: int = 1024 * 1024) -> AsyncIterator[bytes]:
+        """Stream an object's bytes.
+
+        Args:
+            key: Blob key.
+            chunk_size: Bytes per yielded chunk.
+
+        Returns:
+            Async iterator over the object's bytes.
+
+        Raises:
+            NotFoundError: If the key does not exist.
         """
         ...
 
@@ -161,6 +206,33 @@ class ContentStore(Protocol):
 
         Returns:
             All stored versions.
+        """
+        ...
+
+    async def put_raw_response(
+        self,
+        document_id: UUID,
+        step: str,
+        model: str,
+        response_text: str,
+        request_summary: str | None = None,
+    ) -> None:
+        """Persist a provider's verbatim response for debugging.
+
+        When a model returns malformed JSON or a bad transcription, the raw text is
+        the only evidence of what actually happened — parsed DTOs have already
+        discarded it. Implementations store these with a TTL so the collection does
+        not grow without bound.
+
+        Args:
+            document_id: Owning document.
+            step: Pipeline step that made the call, e.g. `"ocr"` or `"extract"`.
+            model: Provider model identifier that produced the response.
+            response_text: The unparsed response body.
+            request_summary: Short description of the request, excluding secrets.
+
+        Returns:
+            None.
         """
         ...
 
@@ -331,7 +403,12 @@ class VectorStore(Protocol):
     """pgvector-backed similarity index over document chunks."""
 
     async def upsert(self, chunks: list[ChunkVector]) -> None:
-        """Insert or replace chunks, keyed on `(document_id, chunk_index)`.
+        """Insert or replace chunks, keyed on `(document_id, chunk_index, embed_model)`.
+
+        `embed_model` is part of the key on purpose: re-embedding under a new
+        model must leave the previous model's rows intact so both can serve
+        traffic during a migration. Keying on `(document_id, chunk_index)` alone
+        would destroy the old index on the first re-embed.
 
         Args:
             chunks: Chunks with embeddings attached.

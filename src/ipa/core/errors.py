@@ -212,7 +212,12 @@ def install_exception_handlers(app: FastAPI) -> None:
             code=f"http_{http_exc.status_code}",
             http_status=http_exc.status_code,
         )
-        mapped.title = HTTPStatus(http_exc.status_code).phrase
+        # Non-standard codes (499, vendor-specific 4xx) are not HTTPStatus members;
+        # raising here would turn a client error into a 500 inside the handler.
+        try:
+            mapped.title = HTTPStatus(http_exc.status_code).phrase
+        except ValueError:
+            mapped.title = f"HTTP {http_exc.status_code}"
         return _respond(mapped.to_problem(str(request.url)))
 
     async def _handle_validation_error(request: Request, exc: Exception) -> JSONResponse:

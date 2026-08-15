@@ -120,3 +120,24 @@ def test_request_validation_becomes_problem_json() -> None:
     assert response.headers["content-type"].startswith(PROBLEM_CONTENT_TYPE)
     assert body["code"] == "validation_error"
     assert body["errors"]
+
+
+def test_non_standard_status_code_does_not_crash_the_handler() -> None:
+    """A 499 is not an HTTPStatus member; looking up .phrase raised ValueError.
+
+    That turned any client error carrying a non-standard code into a 500 raised
+    from inside the error handler itself.
+    """
+    from http import HTTPStatus
+
+    import pytest
+
+    with pytest.raises(ValueError):
+        HTTPStatus(499)
+
+    from ipa.core.errors import IpaError
+
+    error = IpaError(detail="client closed request", code="http_499", http_status=499)
+    problem = error.to_problem("http://test/x")
+
+    assert problem["status"] == 499

@@ -106,7 +106,13 @@ class ChunkVector(IpaModel):
     """An embedded text chunk ready to be written to the vector store."""
 
     document_id: UUID
-    chunk_index: int = Field(ge=0, description="0-based position within the document.")
+    chunk_index: int = Field(
+        ge=-1,
+        description=(
+            "0-based position within the document. -1 is reserved for the "
+            "per-document extraction-summary chunk synthesised from extracted fields."
+        ),
+    )
     text: str
     embedding: list[float]
     embed_model: str
@@ -134,7 +140,9 @@ class ChunkHit(IpaModel):
     """One scored chunk returned by the vector store."""
 
     document_id: UUID
-    chunk_index: int = Field(ge=0)
+    chunk_index: int = Field(
+        ge=-1, description="-1 identifies the extraction-summary chunk."
+    )
     text: str
     score: float = Field(description="Higher is more similar; comparable within one result set.")
     page_from: int | None = Field(default=None, ge=1)
