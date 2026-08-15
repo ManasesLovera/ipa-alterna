@@ -184,16 +184,6 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
-      minio:
-        image: bitnami/minio:latest
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_DEFAULT_BUCKETS: ipa-documents
-        ports: ["9000:9000"]
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       IPA_ENV: test
       IPA_POSTGRES_DSN: postgresql+asyncpg://ipa:ipa@localhost:5432/ipa
@@ -215,6 +205,28 @@ jobs:
       NVIDIA_EMBED_DIM: "1024"
     steps:
       - uses: actions/checkout@v4
+      # MinIO cannot be a service container: the official image needs a
+      # `server /data` command and service containers cannot override a command.
+      # (bitnami/minio, the usual workaround, no longer publishes a rolling tag.)
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 -p 9001:9001 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            --health-cmd "mc ready local" \
+            --health-interval 5s --health-timeout 5s --health-retries 20 \
+            minio/minio:latest server /data --console-address ":9001"
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9000/minio/health/live > /dev/null; then
+              echo "MinIO ready after ${i}s"; break
+            fi
+            if [ "$i" -eq 30 ]; then echo "MinIO failed to start"; docker logs minio; exit 1; fi
+            sleep 1
+          done
+          docker run --rm --network host --entrypoint sh minio/mc:latest -c "
+            mc alias set local http://localhost:9000 minioadmin minioadmin &&
+            mc mb --ignore-existing local/ipa-documents"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
