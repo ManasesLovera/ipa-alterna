@@ -58,9 +58,9 @@ placeholders and paste it as the agent's instruction.
 > **Verify claims by reproduction.** If you assert something is broken, run it and
 > paste the evidence. A finding without a repro is a suggestion, not a defect.
 >
-> **Output.** Post with `gh pr review <PR>` using `--approve` or `--request-changes`
-> (fall back to `--comment` with an explicit verdict line if GitHub blocks reviewing
-> your own PR). The body must:
+> **Output.** Post with `gh pr review <PR>` using `--approve` or
+> `--request-changes` (if GitHub blocks reviewing your own PR, fall back to
+> `gh pr comment <PR> --body-file` with an explicit verdict line). The body must:
 >
 > - open with a one-line verdict plus the single most important finding
 > - list findings worst-first, each with `file:line`, what breaks, and the concrete fix
@@ -73,7 +73,8 @@ placeholders and paste it as the agent's instruction.
 ## Notes
 
 - Reviewing your own PR is blocked by GitHub. When the PR author and reviewer are
-  the same account, `--approve` / `--request-changes` fail; use `--comment` with the
-  verdict stated in the first line.
+  the same account, `gh pr review` fails for all event types, including
+  `--comment`; use `gh pr comment <PR> --body-file` with the verdict stated in
+  the first line.
 - Run one reviewer per PR. A single agent reviewing two branches conflates the two
   diffs and produces vague findings.
