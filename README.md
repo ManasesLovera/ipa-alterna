@@ -58,13 +58,28 @@ be reprocessed independently, which resets it and everything downstream.
 
 ## Quickstart
 
+Prerequisites: Docker, `make`, and [`uv`](https://docs.astral.sh/uv/) (Python 3.12
+is installed by `uv sync`).
+
 ```bash
 cp .env.example .env          # fill in NVIDIA_API_KEY and the three model IDs
+uv sync --all-extras --dev    # create .venv from the committed uv.lock
 make up                       # postgres, mongo, redis, minio, otel, api, worker
 make migrate
 make seed                     # bootstrap admin + example tags + sample documents
 open http://localhost:3000
 ```
+
+Model IDs ship blank. Each one is required only once you enable the matching
+`IPA_FEATURE_*` switch in `.env`; startup then fails fast if the ID is missing.
+
+If a host port is already taken, override it without editing the compose file:
+`IPA_PG_HOST_PORT`, `IPA_MONGO_HOST_PORT`, `IPA_REDIS_HOST_PORT`,
+`IPA_S3_HOST_PORT`, `IPA_S3_CONSOLE_HOST_PORT`, `IPA_API_HOST_PORT`,
+`IPA_JAEGER_HOST_PORT`.
+
+Health: `curl localhost:8000/healthz` (liveness) and `localhost:8000/readyz`
+(Postgres, Mongo, Redis, MinIO). Traces: <http://localhost:16686>.
 
 ## Key design decisions
 
