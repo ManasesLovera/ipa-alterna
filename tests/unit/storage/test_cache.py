@@ -57,6 +57,12 @@ async def test_get_json_missing_returns_none(store: RedisCacheStore) -> None:
     assert await store.get_json("ipa:test:k:absent") is None
 
 
+async def test_get_json_undecodable_value_reads_as_a_miss(store: RedisCacheStore) -> None:
+    await store._client.set("ipa:test:k:junk", b"{not json")
+
+    assert await store.get_json("ipa:test:k:junk") is None
+
+
 async def test_delete_succeeds(store: RedisCacheStore) -> None:
     await store.set_json("ipa:test:k:v1", {"a": 1}, ttl_s=60)
     await store.delete("ipa:test:k:v1")

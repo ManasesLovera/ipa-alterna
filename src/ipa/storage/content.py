@@ -30,6 +30,9 @@ logger = structlog.get_logger(__name__)
 RAW_RESPONSE_TTL_S = 30 * 24 * 60 * 60
 """Raw provider responses expire after 30 days."""
 
+UPSERT_BATCH_SIZE = 50
+"""Page upserts issued concurrently per batch; bounds motor's pool usage."""
+
 
 def _content_error(operation: str, exc: Exception) -> IpaError:
     """Translate a MongoDB failure into an `IpaError`.
@@ -165,8 +168,14 @@ class MongoContentStore:
         # pymongo >= 4.15 operation objects pass keyword arguments (let, sort)
         # that mongomock's bulk builder does not accept yet, and the fan-out is
         # equivalent — one idempotent upsert per (document_id, page).
+        #
+        # Batched, not one gather over every page: a 1,000-page document would
+        # otherwise issue 1,000 simultaneous operations and exhaust motor's
+        # connection pool (default maxPoolSize=100).
         try:
-            await asyncio.gather(*(_upsert(page) for page in pages))
+            for start in range(0, len(pages), UPSERT_BATCH_SIZE):
+                batch = pages[start : start + UPSERT_BATCH_SIZE]
+                await asyncio.gather(*(_upsert(page) for page in batch))
         except Exception as exc:
             raise _content_error("put_pages", exc) from exc
 
@@ -261,11 +270,11 @@ class MongoContentStore:
             query["version"] = version
         try:
             doc = await self._extractions.find_one(query, sort=[("version", DESCENDING)])
+            if doc is None:
+                return None
+            return self._record_from_doc(doc)
         except Exception as exc:
             raise _content_error("get_extraction", exc) from exc
-        if doc is None:
-            return None
-        return self._record_from_doc(doc)
 
     async def list_extractions(self, document_id: UUID) -> list[ExtractionRecord]:
         """Return every extraction version for a document, newest first.

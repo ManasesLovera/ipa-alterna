@@ -79,7 +79,8 @@ class RedisCacheStore:
             key: Cache key.
 
         Returns:
-            The decoded value, or None on a miss or connection failure.
+            The decoded value, or None on a miss, a connection failure, or a
+            value that is not decodable JSON.
         """
         try:
             raw = await self._client.get(key)
@@ -88,7 +89,13 @@ class RedisCacheStore:
             return None
         if raw is None:
             return None
-        return json.loads(raw)
+        try:
+            return json.loads(raw)
+        except (ValueError, TypeError) as exc:
+            # A cache entry is never authoritative: a truncated or foreign value
+            # must read as a miss, not fail the caller's request.
+            logger.warning("cache.get_undecodable", key=key, error=str(exc))
+            return None
 
     async def set_json(self, key: str, value: dict[str, Any], ttl_s: int) -> None:
         """Cache a JSON value with an expiry, swallowing connection failures.

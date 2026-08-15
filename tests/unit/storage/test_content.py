@@ -111,6 +111,18 @@ async def test_get_pages_empty_when_ocr_has_not_run(store: MongoContentStore) ->
     assert await store.get_pages(uuid4()) == []
 
 
+async def test_put_pages_writes_every_page_across_batches(store: MongoContentStore) -> None:
+    document_id = uuid4()
+    many = [
+        PageText(page=number, text=f"page {number}", source="text_layer", char_count=7)
+        for number in range(1, 121)  # spans several UPSERT_BATCH_SIZE batches
+    ]
+
+    await store.put_pages(document_id, many)
+
+    assert [page.page for page in await store.get_pages(document_id)] == list(range(1, 121))
+
+
 async def test_extraction_round_trip_latest_and_explicit_version(
     store: MongoContentStore,
 ) -> None:

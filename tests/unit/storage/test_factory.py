@@ -55,6 +55,49 @@ async def test_singletons_are_cached_and_resettable() -> None:
     await factory.close_stores()
 
 
+async def test_close_stores_resets_singletons_even_when_a_client_fails() -> None:
+    await factory.close_stores()
+
+    class ExplodingCache:
+        """Cache double whose teardown fails."""
+
+        async def aclose(self) -> None:
+            raise RuntimeError("connection already gone")
+
+    factory._cache_store = ExplodingCache()  # type: ignore[assignment]
+    content = factory.get_content_store()
+
+    with pytest.raises(RuntimeError):
+        await factory.close_stores()
+
+    assert factory._cache_store is None
+    assert factory.get_content_store() is not content
+    await factory.close_stores()
+
+
+async def test_init_storage_creates_bucket_and_indexes(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    class Blob:
+        """Blob store double recording startup calls."""
+
+        async def ensure_bucket(self) -> None:
+            calls.append("bucket")
+
+    class Content:
+        """Content store double recording startup calls."""
+
+        async def ensure_indexes(self) -> None:
+            calls.append("indexes")
+
+    monkeypatch.setattr(factory, "get_blob_store", Blob)
+    monkeypatch.setattr(factory, "get_content_store", Content)
+
+    await factory.init_storage()
+
+    assert calls == ["bucket", "indexes"]
+
+
 def test_fastapi_dependencies_return_the_singletons() -> None:
     assert factory.blob_store_dep() is factory.get_blob_store()
     assert factory.content_store_dep() is factory.get_content_store()

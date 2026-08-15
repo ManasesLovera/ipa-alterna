@@ -54,23 +54,49 @@ def get_cache_store() -> RedisCacheStore:
     return _cache_store
 
 
+async def init_storage() -> None:
+    """Create the blob bucket and every MongoDB index. Idempotent.
+
+    Both are startup responsibilities: without the unique index on
+    `(document_id, version)` two concurrent workers can insert the same
+    extraction version, and without the TTL index `raw_responses` grows without
+    bound. Compose seeds the bucket via its `minio-init` service, but a
+    deployment that is not compose has nothing else to create it.
+
+    TODO(T01): call this from the API lifespan and from Celery worker startup —
+    `src/ipa/api/main.py` and the worker bootstrap are T01-owned paths.
+
+    Returns:
+        None.
+
+    Raises:
+        IpaError: If the bucket or the indexes cannot be created.
+    """
+    await get_blob_store().ensure_bucket()
+    await get_content_store().ensure_indexes()
+
+
 async def close_stores() -> None:
     """Close every singleton's client and forget the instances.
 
     Used on process shutdown and between tests. Blob clients hold no pool and
-    need no teardown.
+    need no teardown. A failure closing one client must neither leak the others
+    nor leave a closed client installed as the singleton, so the reset runs
+    under `finally`.
 
     Returns:
         None.
     """
     global _blob_store, _content_store, _cache_store
-    if _cache_store is not None:
-        await _cache_store.aclose()
-    if _content_store is not None:
-        _content_store.close()
-    _blob_store = None
-    _content_store = None
-    _cache_store = None
+    try:
+        if _cache_store is not None:
+            await _cache_store.aclose()
+        if _content_store is not None:
+            _content_store.close()
+    finally:
+        _blob_store = None
+        _content_store = None
+        _cache_store = None
 
 
 def blob_store_dep() -> MinioBlobStore:
