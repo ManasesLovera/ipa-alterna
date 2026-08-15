@@ -81,6 +81,12 @@ request changes. On `changes-requested`, call `scrumforge rework <id>`, then
 - **CI must be green before merge.** The pipeline in `.github/workflows/ci.yml`
   runs actionlint, markdownlint, mermaid validation, ruff, mypy, unit tests,
   alembic up/down, integration tests, frontend build, docker build, and gitleaks.
+- **Markdown must pass markdownlint.** CI runs markdownlint on all `*.md`
+  files. Follow the rules it enforces — notably MD022/MD032 (blank lines
+  around headings and lists, including lists inside blockquotes), MD040
+  (language on every fenced code block), MD024 (no duplicate headings), and
+  MD060 (spaced pipes in table separators). When in doubt, run
+  `npx markdownlint-cli2 <file>` before committing.
 - **Docstrings are required** on every module and public function — this is a
   stated project requirement, not a style preference.
 - **`os.environ` is read only in `src/ipa/core/config.py`.** Everywhere else uses
