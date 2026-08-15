@@ -134,11 +134,26 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-extras --dev
+      # The build lands incrementally: migrations arrive in T02. Until then there
+      # is nothing to apply, and a hard failure here would keep every PR red for
+      # reasons unrelated to the PR.
+      - name: Check for migrations
+        id: have
+        run: |
+          if compgen -G 'migrations/versions/*.py' > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No migration revisions yet; skipping."
+          fi
       - name: alembic upgrade head
+        if: steps.have.outputs.found == 'true'
         run: uv run alembic upgrade head
       - name: no pending autogenerate diff
+        if: steps.have.outputs.found == 'true'
         run: uv run alembic check
       - name: alembic downgrade base
+        if: steps.have.outputs.found == 'true'
         run: uv run alembic downgrade base
 
   integration:
@@ -206,8 +221,20 @@ jobs:
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-spa
       - run: uv sync --all-extras --dev
-      - run: uv run alembic upgrade head
+      - name: Check for integration tests
+        id: have
+        run: |
+          if compgen -G 'tests/integration/test_*.py' > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No integration tests yet; skipping."
+          fi
+      - name: alembic upgrade head
+        if: steps.have.outputs.found == 'true' && hashFiles('migrations/versions/*.py') != ''
+        run: uv run alembic upgrade head
       - name: pytest integration
+        if: steps.have.outputs.found == 'true'
         run: uv run pytest tests/integration -v --maxfail=1 --durations=15
       - name: Upload failure artifacts
         if: failure()
@@ -260,6 +287,10 @@ jobs:
     needs: changes
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks scans history; a shallow clone makes it abort with
+          # "failed to scan Git repository" rather than reporting no leaks.
+          fetch-depth: 0
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
