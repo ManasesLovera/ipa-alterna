@@ -1,35 +1,29 @@
 """Alembic environment, wired for async SQLAlchemy.
 
 The connection URL comes from `ipa.core.config`, never from `alembic.ini`.
-
-`target_metadata` is imported from `ipa.db.base:Base`, which T02 creates. Until
-then the import is tolerated as missing so T01 can be verified standalone: the
-migrations still run, autogenerate simply has nothing to diff against.
+`target_metadata` is the ORM metadata from `ipa.db`; importing `ipa.db.models`
+registers every table on it so autogenerate diffs the full schema.
 """
 
 from __future__ import annotations
 
 import asyncio
 from logging.config import fileConfig
-from typing import Any
 
 from alembic import context
 from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import ipa.db.models  # noqa: F401  (imports register tables on Base.metadata)
 from ipa.core.config import get_settings
+from ipa.db.base import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-try:  # TODO(T02): remove the fallback once ipa.db.base exists.
-    from ipa.db.base import Base  # type: ignore[import-not-found]
-
-    target_metadata: Any = Base.metadata
-except ModuleNotFoundError:
-    target_metadata = None
+target_metadata = Base.metadata
 
 config.set_main_option("sqlalchemy.url", get_settings().postgres.dsn)
 
