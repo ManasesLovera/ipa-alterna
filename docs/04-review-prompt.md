@@ -20,6 +20,7 @@ placeholders and paste it as the agent's instruction.
 > (especially the file-ownership map). System design: `docs/00-architecture.md`.
 >
 > **How to work.**
+>
 > 1. `cd /home/mlovera/dev/ipa && git fetch origin`
 > 2. `git diff origin/main...origin/<BRANCH>` for the full diff; `gh pr view <PR>`
 >    for the description.
@@ -30,6 +31,7 @@ placeholders and paste it as the agent's instruction.
 >    the PR branch. Remove the worktree when done.
 >
 > **Weight these heavily.**
+>
 > - **Spec conformance.** Every deliverable in the spec's Deliverables section
 >   present? Every acceptance criterion actually satisfiable? Name any that are not.
 > - **Downstream sufficiency.** Read `<DOWNSTREAM>` and check that what this PR
@@ -57,6 +59,7 @@ placeholders and paste it as the agent's instruction.
 > **Output.** Post with `gh pr review <PR>` using `--approve` or `--request-changes`
 > (fall back to `--comment` with an explicit verdict line if GitHub blocks reviewing
 > your own PR). The body must:
+>
 > - open with a one-line verdict plus the single most important finding
 > - list findings worst-first, each with `file:line`, what breaks, and the concrete fix
 > - separate blocking issues from optional suggestions
