@@ -96,7 +96,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D103", "ANN201"]
+"tests/*" = ["D102", "D103", "D107", "ANN201"]
 "migrations/*" = ["D103"]
 
 [tool.ruff.lint.pydocstyle]
