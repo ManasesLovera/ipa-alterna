@@ -1,0 +1,177 @@
+name: ipa
+
+x-python-env: &python-env
+  env_file: [.env]
+  environment:
+    IPA_POSTGRES_DSN: postgresql+asyncpg://ipa:ipa@postgres:5432/ipa
+    IPA_MONGO_URI: mongodb://mongo:27017
+    IPA_REDIS_URL: redis://redis:6379/0
+    IPA_CELERY_BROKER_URL: redis://redis:6379/1
+    IPA_CELERY_RESULT_BACKEND: redis://redis:6379/2
+    IPA_S3_ENDPOINT: http://minio:9000
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ipa
+      POSTGRES_PASSWORD: ipa
+      POSTGRES_DB: ipa
+    ports: ["5432:5432"]
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ipa -d ipa"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [ipa]
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: ipa
+    ports: ["27017:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1})"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [ipa]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [ipa]
+
+  minio:
+    image: minio/minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes: [minio-data:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [ipa]
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      minio: {condition: service_healthy}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/ipa-documents &&
+      mc anonymous set none local/ipa-documents &&
+      echo 'bucket ready'
+      "
+    restart: "no"
+    networks: [ipa]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./ops/otel-collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+    depends_on:
+      jaeger: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ipa]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    networks: [ipa]
+
+  api:
+    build:
+      context: .
+      target: runtime
+    <<: *python-env
+    command: ["uvicorn", "ipa.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks: [ipa]
+
+  worker:
+    build:
+      context: .
+      target: runtime
+    <<: *python-env
+    command: ["celery", "-A", "ipa.pipeline.celery_app", "worker", "-l", "info"]
+    depends_on:
+      redis: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+    # TODO(T08): ipa.pipeline.celery_app lands with the orchestrator; until then
+    # this service exits and is expected to restart.
+    restart: unless-stopped
+    networks: [ipa]
+
+  beat:
+    build:
+      context: .
+      target: runtime
+    <<: *python-env
+    command: ["celery", "-A", "ipa.pipeline.celery_app", "beat", "-l", "info"]
+    depends_on:
+      redis: {condition: service_healthy}
+    # TODO(T08): retry sweeper schedule is defined by the orchestrator task.
+    restart: unless-stopped
+    networks: [ipa]
+
+  web:
+    build:
+      context: ./apps/web
+    profiles: [full]
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports: ["3000:3000"]
+    depends_on:
+      api: {condition: service_healthy}
+    networks: [ipa]
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:
+  minio-data:
+
+networks:
+  ipa:
+    driver: bridge
