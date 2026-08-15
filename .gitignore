@@ -42,3 +42,6 @@ tmp/
 # Test artifacts
 tests/e2e/test-results/
 tests/e2e/playwright-report/
+
+# scrumforge board (local state)
+.scrumforge.db
