@@ -43,6 +43,16 @@ jobs:
               - '**/*.md'
               - 'docs/**'
 
+  workflows:
+    name: Workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          fail-on-error: true
+
   docs:
     name: Docs lint
     runs-on: ubuntu-latest
@@ -269,11 +279,11 @@ jobs:
     name: CI gate
     runs-on: ubuntu-latest
     if: always()
-    needs: [docs, lint, unit, migrations, integration, web, docker, security]
+    needs: [workflows, docs, lint, unit, migrations, integration, web, docker, security]
     steps:
       - name: Fail if any required job failed
         run: |
-          results='${{ join(needs.*.result, ",") }}'
+          results='${{ join(needs.*.result, ',') }}'
           echo "job results: $results"
           case "$results" in
             *failure*|*cancelled*) echo "CI gate failed"; exit 1 ;;
