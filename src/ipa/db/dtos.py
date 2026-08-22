@@ -177,6 +177,8 @@ class DocumentPatch(BaseModel):
     error_code: str | None = None
     error_detail: str | None = None
     completed_at: datetime | None = None
+    deleted_at: datetime | None = None
+    meta: dict[str, Any] | None = None
 
 
 class DocumentStepDto(DbDto):
