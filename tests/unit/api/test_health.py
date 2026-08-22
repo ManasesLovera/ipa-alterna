@@ -62,9 +62,9 @@ def test_readyz_is_503_when_a_dependency_is_down(
     assert response.json()["dependencies"]["redis"] == "unavailable"
 
 
-def test_router_registry_starts_empty_and_is_appendable() -> None:
+def test_router_registry_is_appendable() -> None:
     assert isinstance(ROUTERS, list)
-    assert ROUTERS == []
+    assert len(ROUTERS) >= 1
 
 
 def test_auth_stub_allows_anonymous_callers() -> None:

@@ -155,3 +155,17 @@ class DocumentRepository:
         stmt = stmt.order_by(Document.created_at.desc()).limit(limit).offset(offset)
         rows = (await self._session.execute(stmt)).scalars().all()
         return [DocumentDto.model_validate(row) for row in rows]
+
+    async def count_by_tag(self, tag_id: UUID) -> int:
+        """Count live documents referencing a tag.
+
+        Args:
+            tag_id: Identifier of the tag.
+
+        Returns:
+            The number of non-deleted documents with that tag.
+        """
+        stmt = sa.select(sa.func.count()).select_from(Document).where(
+            Document.deleted_at.is_(None), Document.tag_id == tag_id
+        )
+        return int((await self._session.execute(stmt)).scalar_one())

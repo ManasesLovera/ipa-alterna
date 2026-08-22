@@ -68,7 +68,7 @@ class TagFieldCreate(BaseModel):
     field_type: FieldType
     description: str | None = None
     is_required: bool = False
-    position: int
+    position: int = 0
     enum_values: list[str] | None = None
     regex: str | None = None
     min_value: float | None = None
@@ -77,6 +77,9 @@ class TagFieldCreate(BaseModel):
     max_length: int | None = None
     item_type: str | None = None
     object_schema: dict[str, Any] | None = None
+
+
+DbTagFieldCreate = TagFieldCreate
 
 
 class TagDto(DbDto):
