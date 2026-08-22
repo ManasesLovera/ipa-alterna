@@ -63,8 +63,8 @@ async def init_storage() -> None:
     bound. Compose seeds the bucket via its `minio-init` service, but a
     deployment that is not compose has nothing else to create it.
 
-    TODO(T01): call this from the API lifespan and from Celery worker startup —
-    `src/ipa/api/main.py` and the worker bootstrap are T01-owned paths.
+    The API lifespan calls this at startup; the Celery worker bootstrap does the
+    same once the pipeline (T08) lands.
 
     Returns:
         None.

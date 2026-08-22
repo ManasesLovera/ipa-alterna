@@ -18,9 +18,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ipa.api.routers import ROUTERS
 from ipa.core.config import Settings, get_settings
-from ipa.core.errors import install_exception_handlers
+from ipa.core.errors import IpaError, install_exception_handlers
 from ipa.core.logging import configure_logging
 from ipa.core.otel import setup_telemetry, shutdown_telemetry
+from ipa.storage.factory import close_stores, init_storage
 
 logger = structlog.get_logger(__name__)
 
@@ -150,11 +151,31 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        """Log the application lifecycle and flush telemetry on shutdown."""
+        """Initialise storage, log the lifecycle and flush telemetry on shutdown.
+
+        Storage initialisation creates the blob bucket and MongoDB indexes; it
+        must run before any request can write to a store. A failure here is a
+        startup failure — there is no point serving traffic against unready
+        stores.
+
+        Args:
+            app: The application whose lifecycle this manages.
+
+        Returns:
+            An async generator driving the lifespan.
+        """
         logger.info("api.started", env=settings.env, routers=len(ROUTERS))
-        yield
-        shutdown_telemetry()
-        logger.info("api.stopped")
+        try:
+            await init_storage()
+        except IpaError as exc:
+            logger.error("api.init_storage_failed", code=exc.code, detail=exc.detail)
+            raise
+        try:
+            yield
+        finally:
+            await close_stores()
+            shutdown_telemetry()
+            logger.info("api.stopped")
 
     app = FastAPI(
         title="IPA — Intelligent Process Automation",

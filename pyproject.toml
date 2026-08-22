@@ -58,6 +58,7 @@ dev = [
     "celery-types>=0.22",
     "fakeredis[lua]>=2.26",
     "mongomock-motor>=0.0.34",
+    "respx>=0.21",
     "pip-audit>=2.7",
 ]
 
