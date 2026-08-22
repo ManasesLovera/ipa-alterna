@@ -121,7 +121,8 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = [
     "asyncpg.*",
-    "fitz.*",
+    "pymupdf.*",
+    "PIL.*",
     "jsonschema.*",
     "pytesseract.*",
     "mongomock_motor.*",
