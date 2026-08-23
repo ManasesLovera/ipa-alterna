@@ -18,6 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from fastapi import APIRouter
 
 from ipa.api.routers.documents import router as documents_router
+from ipa.api.routers.pipeline import router as pipeline_router
 from ipa.api.routers.tags import router as tags_router
 
-ROUTERS: list[APIRouter] = [tags_router, documents_router]
+ROUTERS: list[APIRouter] = [tags_router, documents_router, pipeline_router]
