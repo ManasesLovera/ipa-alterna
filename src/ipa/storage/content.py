@@ -296,6 +296,35 @@ class MongoContentStore:
         except Exception as exc:
             raise _content_error("list_extractions", exc) from exc
 
+    async def list_current_extractions(self, tag_id: UUID) -> list[ExtractionRecord]:
+        """Return the current extraction version of every document of a tag.
+
+        Args:
+            tag_id: Owning tag.
+
+        Returns:
+            The latest extraction per document for the tag.
+
+        Raises:
+            IpaError: If the read fails.
+        """
+        try:
+            cursor = self._extractions.aggregate(
+                [
+                    {"$match": {"tag_id": str(tag_id)}},
+                    {"$sort": {"document_id": 1, "version": -1}},
+                    {
+                        "$group": {
+                            "_id": "$document_id",
+                            "doc": {"$first": "$$ROOT"},
+                        }
+                    },
+                ]
+            )
+            return [self._record_from_doc(item["doc"]) async for item in cursor]
+        except Exception as exc:
+            raise _content_error("list_current_extractions", exc) from exc
+
     async def put_raw_response(
         self,
         document_id: UUID,
