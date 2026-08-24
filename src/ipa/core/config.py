@@ -158,6 +158,15 @@ class OcrSettings(BaseSettings):
     page_dpi: int = Field(default=220, ge=36, validation_alias="IPA_OCR_PAGE_DPI")
     fallback_enabled: bool = Field(default=True, validation_alias="IPA_OCR_FALLBACK_ENABLED")
     tesseract_langs: str = Field(default="eng+spa", validation_alias="IPA_TESSERACT_LANGS")
+    min_chars_accept: int = Field(
+        default=40, ge=0, validation_alias="IPA_OCR_MIN_CHARS_ACCEPT"
+    )
+    max_failed_page_ratio: float = Field(
+        default=0.5, ge=0.0, le=1.0, validation_alias="IPA_OCR_MAX_FAILED_PAGE_RATIO"
+    )
+    page_concurrency: int = Field(
+        default=4, ge=1, validation_alias="IPA_OCR_PAGE_CONCURRENCY"
+    )
 
 
 class PipelineSettings(BaseSettings):
