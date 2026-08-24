@@ -197,6 +197,15 @@ class FeatureSettings(BaseSettings):
     vlm_ocr_enabled: bool = Field(default=False, validation_alias="IPA_FEATURE_VLM_OCR_ENABLED")
 
 
+class McpSettings(BaseSettings):
+    """MCP server settings for agent access to the document corpus."""
+
+    model_config = _BASE_CONFIG
+
+    port: int = Field(default=8090, ge=1, le=65535, validation_alias="IPA_MCP_PORT")
+    allow_write: bool = Field(default=False, validation_alias="IPA_MCP_ALLOW_WRITE")
+
+
 class OtelSettings(BaseSettings):
     """OpenTelemetry export settings. Telemetry is a no-op when unset."""
 
@@ -246,6 +255,7 @@ class Settings(BaseSettings):
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     pipeline: PipelineSettings = Field(default_factory=PipelineSettings)
     features: FeatureSettings = Field(default_factory=FeatureSettings)
+    mcp: McpSettings = Field(default_factory=McpSettings)
     otel: OtelSettings = Field(default_factory=OtelSettings)
 
     @computed_field  # type: ignore[prop-decorator]

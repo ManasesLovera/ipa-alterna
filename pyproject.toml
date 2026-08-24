@@ -32,7 +32,7 @@ dependencies = [
     "pillow>=11.0",
     "pytesseract>=0.3.13",
     # --- Agent surface ---
-    "mcp>=1.1",
+    "mcp>=1.0,<2",
     # --- Observability ---
     "structlog>=24.4",
     "opentelemetry-sdk>=1.28",
