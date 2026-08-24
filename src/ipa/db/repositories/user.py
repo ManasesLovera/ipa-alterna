@@ -75,3 +75,22 @@ class UserRepository:
         stmt = sa.select(User).where(User.email == email)
         entity = (await self._session.execute(stmt)).scalars().one_or_none()
         return UserDto.model_validate(entity) if entity else None
+
+    async def update_password(self, user_id: UUID, password_hash: str) -> UserDto | None:
+        """Replace a user's password hash.
+
+        Args:
+            user_id: Identifier of the user.
+            password_hash: The new Argon2id hash.
+
+        Returns:
+            The updated user DTO, or None when the id is unknown.
+        """
+        stmt = (
+            sa.update(User)
+            .where(User.id == user_id)
+            .values(password_hash=password_hash)
+            .returning(User)
+        )
+        entity = (await self._session.execute(stmt)).scalars().one_or_none()
+        return UserDto.model_validate(entity) if entity else None

@@ -17,11 +17,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from fastapi import APIRouter
 
+from ipa.api.routers.auth import router as auth_router
 from ipa.api.routers.documents import router as documents_router
 from ipa.api.routers.pipeline import router as pipeline_router
 from ipa.api.routers.review import router as review_router
 from ipa.api.routers.search import router as search_router
 from ipa.api.routers.tags import router as tags_router
+from ipa.api.routers.webhooks import router as webhooks_router
 
 ROUTERS: list[APIRouter] = [
     tags_router,
@@ -29,4 +31,6 @@ ROUTERS: list[APIRouter] = [
     pipeline_router,
     review_router,
     search_router,
+    auth_router,
+    webhooks_router,
 ]

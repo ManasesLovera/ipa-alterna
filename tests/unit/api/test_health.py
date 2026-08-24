@@ -67,13 +67,19 @@ def test_router_registry_is_appendable() -> None:
     assert len(ROUTERS) >= 1
 
 
-def test_auth_stub_allows_anonymous_callers() -> None:
+def test_auth_requires_credentials() -> None:
     import asyncio
 
-    from ipa.api.auth import Principal, require_auth
+    from fastapi import Request
 
-    principal = asyncio.run(require_auth())
+    from ipa.api.auth import require_auth
+    from ipa.domain.users import AuthError
 
-    assert isinstance(principal, Principal)
-    assert principal.is_authenticated is False
-    assert principal.has_scope("documents:read") is True
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+
+    try:
+        asyncio.run(require_auth(request))
+    except AuthError:
+        pass
+    else:
+        raise AssertionError("expected AuthError without credentials")
