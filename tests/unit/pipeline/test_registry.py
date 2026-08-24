@@ -17,9 +17,18 @@ def test_register_and_get_handler() -> None:
 
 
 def test_get_handler_unknown_raises() -> None:
+    from ipa.pipeline.registry import _handlers
+
+    # Save current handlers, clear, assert a missing one raises, restore.
+    saved = dict(_handlers)
+    _handlers.clear()
     try:
-        get_handler(PipelineStep.EMBED)
-    except ConfigurationError as exc:
-        assert "no handler" in str(exc)
-    else:
-        raise AssertionError("expected ConfigurationError")
+        try:
+            get_handler(PipelineStep.EMBED)
+        except ConfigurationError as exc:
+            assert "no handler" in str(exc)
+        else:
+            raise AssertionError("expected ConfigurationError")
+    finally:
+        _handlers.clear()
+        _handlers.update(saved)
