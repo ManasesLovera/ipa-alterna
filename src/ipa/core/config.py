@@ -169,6 +169,7 @@ class PipelineSettings(BaseSettings):
     step_retry_backoff_s: int = Field(default=15, ge=0, validation_alias="IPA_STEP_RETRY_BACKOFF_S")
     chunk_tokens: int = Field(default=512, ge=1, validation_alias="IPA_CHUNK_TOKENS")
     chunk_overlap: int = Field(default=64, ge=0, validation_alias="IPA_CHUNK_OVERLAP")
+    max_pages: int = Field(default=1000, ge=1, validation_alias="IPA_MAX_PAGES")
 
 
 class FeatureSettings(BaseSettings):
